@@ -25,5 +25,6 @@ services:
         sync: false
       - key: ADMIN_TELEGRAM_ID
         sync: false
-      - key: WEBAPP_URL
-        sync: false
+      # WEBAPP_URL здесь намеренно нет: на Render адрес службы приходит
+      # в RENDER_EXTERNAL_URL, и код берёт его оттуда. Так не бывает
+      # расхождения между тем, что вписали руками, и тем, где сервис живёт.

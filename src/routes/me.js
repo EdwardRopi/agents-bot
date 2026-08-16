@@ -1,6 +1,6 @@
 const express = require('express');
 const pool = require('../db/pool');
-const { AGENTS, HOST } = require('../agents');
+const { AGENTS, HOST, BRIEF_OPTIONAL } = require('../agents');
 const { SECTIONS, briefProgress } = require('../brief-schema');
 
 const router = express.Router();
@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
       },
       workspace: req.workspace,
       brief: { progress: briefProgress(sections), schema: SECTIONS },
-      agents: AGENTS,
+      agents: AGENTS.map((a) => ({ ...a, needsBrief: !BRIEF_OPTIONAL.has(a.id) })),
       host: HOST,
     });
   } catch (err) {

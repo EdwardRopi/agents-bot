@@ -1,6 +1,6 @@
 const express = require('express');
 const pool = require('../db/pool');
-const { AGENT_IDS } = require('../agents');
+const { AGENT_IDS, BRIEF_OPTIONAL } = require('../agents');
 const { briefProgress } = require('../brief-schema');
 const { notifyAdminNewTask } = require('../bot/bot');
 
@@ -47,9 +47,10 @@ router.post('/', async (req, res) => {
   try {
     // Без брифа агенты работать не будут — лучше сказать это здесь,
     // чем поставить задачу в очередь и вернуть отказ через полчаса.
+    // Исключение — интервьюер: он этот бриф и заполняет.
     const brief = await pool.query('SELECT sections FROM briefs WHERE workspace_id = $1', [req.workspace.id]);
     const progress = briefProgress(brief.rows[0] ? brief.rows[0].sections : {});
-    if (!progress.ready) {
+    if (!progress.ready && !BRIEF_OPTIONAL.has(agent)) {
       return res.status(409).json({
         error: 'Сначала заполните бриф',
         detail: `Готово ${progress.done} из ${progress.total} обязательных разделов. Без них агент напишет текст про несуществующую компанию.`,

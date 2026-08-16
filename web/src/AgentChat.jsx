@@ -78,7 +78,7 @@ export default function AgentChat({ agent, tasks, briefReady, onSent, onOpenWiza
         ))}
       </div>
 
-      {!briefReady ? (
+      {!briefReady && agent.needsBrief ? (
         <div className="notice">
           <b>Сначала расскажите о своём деле.</b> Без этого {agent.name} напишет текст про несуществующую компанию —
           все факты берутся из ваших ответов, а не выдумываются.

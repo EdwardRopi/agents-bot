@@ -45,7 +45,17 @@ export default function Room({ me, tasks, onOpenAgent, onOpenWizard }) {
                 onOpenWizard();
               }}
             >
-              Рассказать о деле
+              Заполнить анкету
+            </button>
+            <button
+              className="btn ghost"
+              style={{ marginTop: 8 }}
+              onClick={() => {
+                haptic();
+                onOpenAgent('interview');
+              }}
+            >
+              Или расскажите Полине словами
             </button>
           </div>
         </div>

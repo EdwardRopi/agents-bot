@@ -1,0 +1,29 @@
+# Описание службы для Render. Позволяет создать сервис из репозитория
+# кнопкой Blueprint вместо ручного заполнения полей.
+#
+# Секреты сюда не пишем: sync: false означает «спросить значение при создании»,
+# и оно останется в панели Render, а не в git.
+
+services:
+  - type: web
+    name: agents-bot
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: BOT_TOKEN
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: RUNNER_TOKEN
+        sync: false
+      - key: ADMIN_TELEGRAM_ID
+        sync: false
+      - key: WEBAPP_URL
+        sync: false

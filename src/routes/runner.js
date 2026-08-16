@@ -21,9 +21,11 @@ router.get('/tasks', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT t.id, t.agent, t.prompt, t.status, t.created_at,
               w.id AS workspace_id, w.name AS workspace_name, w.owner_id,
+              COALESCE('@' || u.username, u.first_name) AS owner_name,
               b.sections AS brief
          FROM tasks t
          JOIN workspaces w ON w.id = t.workspace_id
+         LEFT JOIN users u ON u.telegram_id = w.owner_id
          LEFT JOIN briefs b ON b.workspace_id = w.id
         WHERE t.status = $1
         ORDER BY t.created_at ASC

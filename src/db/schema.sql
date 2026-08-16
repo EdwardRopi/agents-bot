@@ -12,6 +12,19 @@ CREATE TABLE IF NOT EXISTS users (
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Доступ только по приглашению. Без этого любой, кто найдёт бота, заведёт себе
+-- пространство и начнёт ставить задачи, которые кто-то должен выполнять.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS status     TEXT NOT NULL DEFAULT 'pending';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invited_by TEXT;
+
+CREATE TABLE IF NOT EXISTS invites (
+    code        TEXT PRIMARY KEY,
+    label       TEXT NOT NULL,          -- станет названием рабочего пространства
+    max_uses    INTEGER NOT NULL DEFAULT 1,
+    uses        INTEGER NOT NULL DEFAULT 0,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- Рабочее пространство = один бизнес клиента.
 -- В первой версии у пользователя оно одно, но таблица сразу рассчитана
 -- на несколько: агентство ведёт нескольких клиентов из одного аккаунта.

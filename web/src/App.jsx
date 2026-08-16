@@ -23,7 +23,7 @@ export default function App() {
         setMe(profile);
         await loadTasks();
       } catch (err) {
-        setFatal(err.message);
+        setFatal(err.payload?.error === 'need_invite' ? { invite: true, text: err.detail } : { text: err.message });
       }
     })();
   }, [loadTasks]);
@@ -57,9 +57,13 @@ export default function App() {
     return (
       <div className="center">
         <div>
-          <p style={{ fontWeight: 700, marginBottom: 8 }}>Не удалось открыть команду</p>
-          <p style={{ color: 'var(--muted)', fontSize: 14 }}>
-            {api.hasInitData ? fatal : 'Это приложение открывается из Telegram — через бота.'}
+          <p style={{ fontWeight: 700, marginBottom: 8 }}>
+            {fatal.invite ? 'Нужно приглашение' : 'Не удалось открыть команду'}
+          </p>
+          <p style={{ color: 'var(--muted)', fontSize: 14, maxWidth: '30ch' }}>
+            {!api.hasInitData
+              ? 'Это приложение открывается из Telegram — через бота.'
+              : fatal.text || 'Попробуйте ещё раз через минуту.'}
           </p>
         </div>
       </div>

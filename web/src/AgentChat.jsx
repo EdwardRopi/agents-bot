@@ -69,7 +69,9 @@ export default function AgentChat({ agent, tasks, briefReady, onSent, onOpenWiza
             )}
             {(t.status === 'new' || t.status === 'running') && (
               <div className="bubble pending">
-                {t.status === 'new' ? `${agent.name} взял задачу в работу` : `${agent.name} работает над этим`}
+                {t.status === 'new'
+                  ? `Задача принята, ${agent.name} возьмётся за неё в рабочее время. Когда закончит — придёт уведомление в Telegram.`
+                  : `${agent.name} работает над этим`}
               </div>
             )}
           </div>

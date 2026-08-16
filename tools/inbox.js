@@ -79,7 +79,7 @@ const [, , cmd, ...args] = process.argv;
     }
     for (const t of tasks) {
       const when = new Date(t.created_at).toLocaleString('ru-RU');
-      console.log(`#${t.id}  ${t.agent.padEnd(7)}  ${t.workspace_name}  ${when}`);
+      console.log(`#${t.id}  ${t.agent.padEnd(7)}  ${t.workspace_name}${t.owner_name ? ` (${t.owner_name})` : ''}  ${when}`);
       console.log(`        ${t.prompt.slice(0, 100).replace(/\s+/g, ' ')}`);
     }
     return;
@@ -96,7 +96,7 @@ const [, , cmd, ...args] = process.argv;
     }
     console.log(`# Задача #${task.id}`);
     console.log(`Агент: ${task.agent}`);
-    console.log(`Клиент: ${task.workspace_name} (workspace ${task.workspace_id})`);
+    console.log(`Клиент: ${task.workspace_name}${task.owner_name ? ` — ${task.owner_name}` : ''} (workspace ${task.workspace_id})`);
     console.log(`\n## Что просят\n\n${task.prompt}`);
     console.log(`\n## Бриф клиента\n\n${briefToMarkdown(task.brief)}`);
     return;

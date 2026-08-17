@@ -34,6 +34,11 @@
 
 html, body, #root { height: 100%; }
 
+/* Приложение скроллится только вниз. Вбок — никогда: агенты присылают длинные
+   ссылки, пути и слова без пробелов, и любое из них иначе растягивает страницу.
+   Это страховка; сами причины переполнения убраны ниже по месту. */
+html, body { max-width: 100%; overflow-x: hidden; }
+
 body {
   margin: 0;
   background: var(--bg);
@@ -43,12 +48,15 @@ body {
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+  overflow-wrap: break-word;
 }
 
 button { font: inherit; color: inherit; cursor: pointer; }
 
 .app {
+  width: 100%;
   max-width: 620px;
+  min-width: 0;
   margin: 0 auto;
   padding: 12px 14px calc(24px + env(safe-area-inset-bottom));
   display: flex;
@@ -58,7 +66,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ---------- шапка ---------- */
 .topbar { display: flex; align-items: center; gap: 10px; }
-.topbar h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em; flex: 1; }
+.topbar h1 {
+  margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+  flex: 1; min-width: 0;
+}
 .chip {
   font-size: 12px; padding: 5px 10px; border-radius: 999px;
   background: var(--sunken); color: var(--muted); white-space: nowrap;
@@ -96,7 +107,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   font-size: 12px; text-transform: uppercase; letter-spacing: 0.09em;
   color: var(--muted); margin: 4px 0 0;
 }
-.roster { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+/* minmax(0, 1fr), а не 1fr: иначе колонка не может стать уже своего самого
+   длинного слова — «Контент-маркетолог» на узком экране раздвинул бы сетку. */
+.roster { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .agent {
   background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
   padding: 8px; text-align: left; display: flex; flex-direction: column; gap: 8px;
@@ -104,8 +117,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .agent:active { transform: scale(0.98); }
 .agent .plate { aspect-ratio: 1; width: 100%; }
-.agent .nm { font-size: 14px; font-weight: 700; line-height: 1.15; }
-.agent .rl { font-size: 11.5px; color: var(--muted); line-height: 1.25; }
+.agent .nm { font-size: 14px; font-weight: 700; line-height: 1.15; overflow-wrap: anywhere; }
+.agent .rl { font-size: 11.5px; color: var(--muted); line-height: 1.25; overflow-wrap: anywhere; }
 .agent .accent-bar { height: 3px; border-radius: 2px; }
 .badge {
   position: absolute; top: 12px; right: 12px;
@@ -121,17 +134,30 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .feed-item .mini { width: 34px; height: 34px; flex: none; border-radius: 8px; }
 .feed-item .txt { flex: 1; min-width: 0; }
-.feed-item .t1 { font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.feed-item .t2 { font-size: 12px; color: var(--muted); }
+/* display: block обязателен. У строчного span «overflow: hidden» и многоточие
+   не работают вовсе, а «white-space: nowrap» работает — и задача на 4000
+   символов вытягивалась в одну строку через весь экран. */
+.feed-item .t1 {
+  display: block; font-size: 14px; font-weight: 600;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.feed-item .t2 { display: block; font-size: 12px; color: var(--muted); }
 
 /* ---------- переписка ---------- */
 .chat-head { display: flex; gap: 12px; align-items: center; }
+.chat-head > div { min-width: 0; }
 .chat-head .plate { width: 54px; height: 54px; flex: none; }
 .chat-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
 .chat-head .rl { font-size: 12.5px; color: var(--muted); }
 
-.thread { display: flex; flex-direction: column; gap: 12px; }
-.bubble { border-radius: 12px; padding: 11px 13px; font-size: 14.5px; max-width: 92%; }
+.thread { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.bubble {
+  border-radius: 12px; padding: 11px 13px; font-size: 14.5px;
+  max-width: 92%; min-width: 0;
+  /* anywhere, а не break-word: в ответах агентов встречаются ссылки и адреса
+     без пробелов — их надо рвать в любом месте, иначе они торчат за пузырь. */
+  overflow-wrap: anywhere;
+}
 .bubble.mine { align-self: flex-end; background: var(--ink); color: var(--bg); }
 .bubble.theirs { align-self: flex-start; background: var(--card); border: 1px solid var(--line); }
 .bubble .when { font-size: 11px; opacity: 0.6; margin-top: 6px; }
@@ -144,6 +170,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .md ul { margin: 0 0 10px; padding-left: 20px; }
 .md li { margin-bottom: 4px; }
 .md hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+/* Кусок в обратных кавычках раньше был вообще не оформлен: длинный адрес
+   или путь внутри него не переносился и вылезал за пузырь. */
+.md code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em; background: var(--sunken); color: var(--ink);
+  padding: 1px 5px; border-radius: 5px; overflow-wrap: anywhere;
+}
 
 .composer { display: flex; flex-direction: column; gap: 8px; }
 textarea, input[type='text'] {
@@ -167,7 +200,9 @@ textarea:focus, input:focus { outline: 2px solid var(--ink); outline-offset: -1p
 .field { margin-bottom: 14px; }
 .field > label { display: block; font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
 .list-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
-.list-row input { flex: 1; }
+/* min-width: 0 — у поля ввода собственная минимальная ширина примерно
+   в двадцать символов, и без этого оно отказывается сжиматься. */
+.list-row input { flex: 1; min-width: 0; }
 .icon-btn {
   border: 1px solid var(--line); background: var(--card); border-radius: 9px;
   width: 42px; height: 42px; flex: none; font-size: 18px; color: var(--muted);
@@ -181,7 +216,7 @@ textarea:focus, input:focus { outline: 2px solid var(--ink); outline-offset: -1p
   font-size: 12px; color: var(--muted); margin-bottom: 8px;
 }
 .nav { display: flex; gap: 8px; }
-.nav .btn { flex: 1; }
+.nav .btn { flex: 1; min-width: 0; }
 
 .notice {
   background: var(--sunken); border-radius: 12px; padding: 12px 14px;

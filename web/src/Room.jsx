@@ -7,7 +7,7 @@ const STATUS_LABEL = {
   failed: 'не вышло',
 };
 
-export default function Room({ me, tasks, onOpenAgent, onOpenWizard }) {
+export default function Room({ me, tasks, onOpenAgent, onOpenWizard, onReplayTour }) {
   const { workspace, brief, agents, host } = me;
   const ready = brief.progress.ready;
 
@@ -24,7 +24,7 @@ export default function Room({ me, tasks, onOpenAgent, onOpenWizard }) {
     <>
       <div className="topbar">
         <h1>{workspace.name}</h1>
-        <span className={`chip${ready ? ' ready' : ''}`}>
+        <span className={`chip${ready ? ' ready' : ''}`} data-tour="brief">
           {ready ? 'бриф готов' : `бриф ${brief.progress.done}/${brief.progress.total}`}
         </span>
       </div>
@@ -62,11 +62,12 @@ export default function Room({ me, tasks, onOpenAgent, onOpenWizard }) {
       )}
 
       <p className="section-title">Команда</p>
-      <div className="roster">
+      <div className="roster" data-tour="roster">
         {agents.map((a) => (
           <button
             key={a.id}
             className="agent"
+            data-tour={`agent-${a.id}`}
             onClick={() => {
               haptic();
               onOpenAgent(a.id);
@@ -110,6 +111,10 @@ export default function Room({ me, tasks, onOpenAgent, onOpenWizard }) {
           </div>
         </>
       )}
+
+      <button className="tour-again" onClick={onReplayTour}>
+        Показать обучение ещё раз
+      </button>
     </>
   );
 }

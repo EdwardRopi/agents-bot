@@ -3,6 +3,10 @@ import { api } from './api';
 import Room from './Room.jsx';
 import AgentChat from './AgentChat.jsx';
 import BriefWizard from './BriefWizard.jsx';
+import Tour from './Tour.jsx';
+
+/** Версия в ключе — чтобы при переделке тура его увидели и старые клиенты. */
+const TOUR_KEY = 'tour_v1';
 
 export default function App() {
   const [me, setMe] = useState(null);
@@ -10,10 +14,23 @@ export default function App() {
   const [briefSections, setBriefSections] = useState(null);
   const [screen, setScreen] = useState({ name: 'room' });
   const [fatal, setFatal] = useState(null);
+  const [tour, setTour] = useState(false);
 
   const loadTasks = useCallback(async () => {
     const { tasks } = await api.tasks();
     setTasks(tasks);
+  }, []);
+
+  // useCallback здесь не украшение: тур подписывается на системную «назад»
+  // по этой функции, и новая ссылка на каждый рендер дёргала бы подписку
+  // каждые 15 секунд, пока опрашивается очередь.
+  const closeTour = useCallback(() => {
+    setTour(false);
+    try {
+      localStorage.setItem(TOUR_KEY, '1');
+    } catch {
+      /* приватный режим — обойдёмся */
+    }
   }, []);
 
   useEffect(() => {
@@ -21,6 +38,14 @@ export default function App() {
       try {
         const profile = await api.me();
         setMe(profile);
+        // Обучение показываем один раз и только тем, кто его ещё не видел.
+        // localStorage может быть недоступен — тогда просто не показываем,
+        // молча падать на первом же экране приложение не должно.
+        try {
+          if (!localStorage.getItem(TOUR_KEY)) setTour(true);
+        } catch {
+          /* приватный режим — обойдёмся */
+        }
         await loadTasks();
       } catch (err) {
         setFatal(err.payload?.error === 'need_invite' ? { invite: true, text: err.detail } : { text: err.message });
@@ -92,8 +117,11 @@ export default function App() {
           tasks={tasks}
           onOpenAgent={(id) => setScreen({ name: 'chat', agentId: id })}
           onOpenWizard={openWizard}
+          onReplayTour={() => setTour(true)}
         />
       )}
+
+      {tour && screen.name === 'room' && <Tour agents={me.agents} onClose={closeTour} />}
 
       {screen.name === 'chat' && (
         <AgentChat

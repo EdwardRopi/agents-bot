@@ -36,7 +36,24 @@ export const api = {
   tasks: (agent) => request(`/api/tasks${agent ? `?agent=${agent}` : ''}`),
   createTask: (agent, prompt) =>
     request('/api/tasks', { method: 'POST', body: JSON.stringify({ agent, prompt }) }),
+  billing: () => request('/api/billing'),
+  invoice: (plan) => request('/api/billing/invoice', { method: 'POST', body: JSON.stringify({ plan }) }),
 };
+
+/**
+ * Открывает окно оплаты Telegram. Возвращает статус, но опираться на него
+ * для включения тарифа нельзя — это браузер клиента. Тариф включает сервер
+ * по событию successful_payment; здесь мы только обновляем экран.
+ */
+export const payWithStars = (link) =>
+  new Promise((resolve) => {
+    const tg = window.Telegram?.WebApp;
+    if (!tg?.openInvoice) {
+      window.open(link, '_blank');
+      return resolve('unknown');
+    }
+    tg.openInvoice(link, resolve);
+  });
 
 export const haptic = (style = 'light') => {
   try {

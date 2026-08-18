@@ -5,10 +5,11 @@ import Markdown from './Markdown.jsx';
 const fmt = (iso) =>
   new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
-export default function AgentChat({ agent, tasks, briefReady, onSent, onOpenWizard }) {
+export default function AgentChat({ agent, tasks, briefReady, onSent, onOpenWizard, onOpenTariffs }) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [outOfQuota, setOutOfQuota] = useState(null);
 
   const mine = tasks.filter((t) => t.agent === agent.id);
   const busy = mine.some((t) => t.status === 'new' || t.status === 'running');
@@ -24,7 +25,10 @@ export default function AgentChat({ agent, tasks, briefReady, onSent, onOpenWiza
       setText('');
       await onSent();
     } catch (err) {
-      setError(err.detail ? `${err.message}. ${err.detail}` : err.message);
+      // 402 — не ошибка, а кончившаяся квота. Показываем это отдельно
+      // и понятно, а не красной строкой под полем ввода.
+      if (err.status === 402) setOutOfQuota({ title: err.message, detail: err.detail });
+      else setError(err.detail ? `${err.message}. ${err.detail}` : err.message);
     } finally {
       setSending(false);
     }
@@ -78,7 +82,16 @@ export default function AgentChat({ agent, tasks, briefReady, onSent, onOpenWiza
         ))}
       </div>
 
-      {!briefReady && agent.needsBrief ? (
+      {outOfQuota ? (
+        <div className="notice">
+          <b>{outOfQuota.title}.</b> {outOfQuota.detail}
+          <div style={{ marginTop: 10 }}>
+            <button className="btn slim" onClick={onOpenTariffs}>
+              Посмотреть тарифы
+            </button>
+          </div>
+        </div>
+      ) : !briefReady && agent.needsBrief ? (
         <div className="notice">
           <b>Сначала расскажите о своём деле.</b> Без этого {agent.name} напишет текст про несуществующую компанию —
           все факты берутся из ваших ответов, а не выдумываются.

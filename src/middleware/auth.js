@@ -32,7 +32,11 @@ async function authMiddleware(req, res, next) {
       [user.id, user.username || null, user.first_name || null, admin ? 'active' : 'pending']
     );
 
-    const { rows } = await pool.query('SELECT status FROM users WHERE telegram_id = $1', [user.id]);
+    const { rows } = await pool.query(
+      `SELECT status, plan, plan_until, period_start, period_tasks, period_cents, day_date, day_tasks
+         FROM users WHERE telegram_id = $1`,
+      [user.id]
+    );
     const active = admin || (rows[0] && rows[0].status === 'active');
 
     if (!active) {
@@ -44,6 +48,7 @@ async function authMiddleware(req, res, next) {
 
     const name = admin ? 'Мой бизнес' : user.first_name ? `Бизнес ${user.first_name}` : 'Мой бизнес';
     req.telegramUser = user;
+    req.userRow = rows[0] || {};
     req.workspace = await ensureWorkspace(user.id, name);
     req.isAdmin = admin;
     next();

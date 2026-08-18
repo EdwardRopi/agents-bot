@@ -156,6 +156,71 @@ if (!token) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Оплата звёздами
+// ---------------------------------------------------------------------------
+
+if (bot) {
+  // Ответить надо за 10 секунд, иначе Telegram отменит платёж сам.
+  bot.on('pre_checkout_query', async (query) => {
+    try {
+      const ok = /^plan:[a-z]+:\d+$/.test(query.invoice_payload || '');
+      await bot.answerPreCheckoutQuery(query.id, ok, ok ? undefined : { error_message: 'Счёт устарел, откройте тарифы заново' });
+    } catch (err) {
+      console.error('pre_checkout:', err.message);
+    }
+  });
+
+  /**
+   * Единственное место, где включается тариф.
+   *
+   * Колбэк openInvoice во фронте для этого не годится: он приходит в браузер
+   * клиента, а браузер клиента подделывается за пять минут. Это событие
+   * приходит от Telegram на сервер, и подделать его нельзя.
+   */
+  bot.on('successful_payment', async (msg) => {
+    const p = msg.successful_payment;
+    const telegramId = msg.from.id;
+    try {
+      const { getTariff } = require('../tariffs');
+      const { activate } = require('../limits');
+      const planId = String(p.invoice_payload || '').split(':')[1];
+      const tariff = getTariff(planId);
+
+      // Уникальность charge_id — защита от повторной доставки события.
+      // Без неё клиент получил бы два периода за одну оплату.
+      const ins = await pool.query(
+        `INSERT INTO payments (telegram_id, charge_id, plan, stars, is_recurring)
+              VALUES ($1, $2, $3, $4, $5)
+         ON CONFLICT (charge_id) DO NOTHING
+         RETURNING id`,
+        [telegramId, p.telegram_payment_charge_id, planId, p.total_amount, Boolean(p.is_recurring)]
+      );
+      if (ins.rows.length === 0) return; // уже обработали
+
+      await activate(telegramId, tariff);
+
+      const until = p.subscription_expiration_date
+        ? new Date(p.subscription_expiration_date * 1000).toLocaleDateString('ru-RU')
+        : new Date(Date.now() + tariff.days * 86400000).toLocaleDateString('ru-RU');
+
+      await bot.sendMessage(
+        telegramId,
+        `Тариф «${tariff.name}» включён до ${until}.\n\n` +
+          `${tariff.perDay} ${tariff.perDay === 1 ? 'задача' : 'задачи'} в день, до ${tariff.perPeriod} за период. ` +
+          'Команда ждёт работы.',
+        { reply_markup: openButton() }
+      );
+    } catch (err) {
+      console.error('successful_payment:', err.message);
+      // Деньги списаны, а тариф не включился — это надо видеть сразу.
+      if (adminId) {
+        bot.sendMessage(adminId, `ОПЛАТА НЕ ПРОШЛА ДО КОНЦА: ${telegramId}, ${p.total_amount} XTR, ${err.message}`).catch(() => {});
+      }
+    }
+  });
+}
+
 /** Разбирает входящий запрос от Telegram. Вешается в server.js. */
 function handleWebhook(req, res) {
   if (!bot || !useWebhook) return res.sendStatus(404);
@@ -189,10 +254,17 @@ async function notifyUserTaskDone(ownerId, task) {
   await bot.sendMessage(ownerId, text, { reply_markup: openButton() });
 }
 
+/** Ссылка на счёт в звёздах. Без бота её создать невозможно. */
+async function createInvoiceLink(title, description, payload, providerToken, currency, prices, extra = {}) {
+  if (!bot) throw new Error('Бот не запущен: нет BOT_TOKEN');
+  return bot.createInvoiceLink(title, description, payload, providerToken, currency, prices, extra);
+}
+
 module.exports = {
   bot,
   getWebhookPath: () => webhookPath,
   handleWebhook,
   notifyAdminNewTask,
   notifyUserTaskDone,
+  createInvoiceLink,
 };

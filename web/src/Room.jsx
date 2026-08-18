@@ -7,8 +7,8 @@ const STATUS_LABEL = {
   failed: 'не вышло',
 };
 
-export default function Room({ me, tasks, onOpenAgent, onOpenWizard, onReplayTour }) {
-  const { workspace, brief, agents, host } = me;
+export default function Room({ me, tasks, onOpenAgent, onOpenWizard, onReplayTour, onOpenTariffs }) {
+  const { workspace, brief, agents, host, limits } = me;
   const ready = brief.progress.ready;
 
   // Кто чем занят прямо сейчас — чтобы значок «работает» стоял на карточке
@@ -59,6 +59,17 @@ export default function Room({ me, tasks, onOpenAgent, onOpenWizard, onReplayTou
             </button>
           </div>
         </div>
+      )}
+
+      {limits && (
+        <button className="quota" onClick={onOpenTariffs} data-tour="quota">
+          <span className="quota-plan">{limits.planName}</span>
+          <span className="quota-left">
+            осталось {limits.period.left} из {limits.period.limit}
+            {' · '}сегодня {limits.day.left} из {limits.day.limit}
+          </span>
+          <span className="quota-go">→</span>
+        </button>
       )}
 
       <p className="section-title">Команда</p>

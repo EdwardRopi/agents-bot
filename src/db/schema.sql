@@ -64,3 +64,51 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 CREATE INDEX IF NOT EXISTS idx_tasks_ws_agent ON tasks(workspace_id, agent, created_at);
 CREATE INDEX IF NOT EXISTS idx_tasks_status   ON tasks(status, created_at);
+
+-- ---------------------------------------------------------------------------
+-- Подписка и расход
+-- ---------------------------------------------------------------------------
+
+-- Тариф живёт на владельце, а не на пространстве: агентский тариф ведёт
+-- несколько бизнесов, и три задачи в день у него общие на всех.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan           TEXT NOT NULL DEFAULT 'free';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS plan_until     TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS period_start   TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE users ADD COLUMN IF NOT EXISTS period_tasks   INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS period_cents   INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS day_date       DATE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS day_tasks      INTEGER NOT NULL DEFAULT 0;
+
+-- Платежи. charge_id уникален намеренно: Telegram может прислать одно и то же
+-- событие дважды, и без этого ограничения клиент получил бы два периода
+-- за одну оплату.
+CREATE TABLE IF NOT EXISTS payments (
+    id           SERIAL PRIMARY KEY,
+    telegram_id  BIGINT NOT NULL,
+    charge_id    TEXT UNIQUE NOT NULL,
+    plan         TEXT NOT NULL,
+    stars        INTEGER NOT NULL,
+    is_recurring BOOLEAN NOT NULL DEFAULT false,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_user ON payments(telegram_id, created_at);
+
+-- Расход по каждому обращению к модели. Без этой таблицы невозможно узнать,
+-- какой клиент разоряет, пока не придёт счёт от Anthropic.
+CREATE TABLE IF NOT EXISTS usage (
+    id           SERIAL PRIMARY KEY,
+    task_id      INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+    workspace_id INTEGER REFERENCES workspaces(id) ON DELETE SET NULL,
+    telegram_id  BIGINT,
+    agent        TEXT NOT NULL,
+    model        TEXT NOT NULL,
+    in_tokens    INTEGER NOT NULL DEFAULT 0,
+    out_tokens   INTEGER NOT NULL DEFAULT 0,
+    cached_in    INTEGER NOT NULL DEFAULT 0,
+    cents        NUMERIC(10, 4) NOT NULL DEFAULT 0,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_usage_user ON usage(telegram_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_usage_task ON usage(task_id);

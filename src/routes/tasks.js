@@ -3,6 +3,7 @@ const pool = require('../db/pool');
 const { AGENT_IDS, BRIEF_OPTIONAL } = require('../agents');
 const { briefProgress } = require('../brief-schema');
 const { notifyAdminNewTask } = require('../bot/bot');
+const limits = require('../limits');
 
 const router = express.Router();
 
@@ -69,14 +70,36 @@ router.post('/', async (req, res) => {
       return res.status(409).json({ error: 'Этот агент ещё занят предыдущей задачей' });
     }
 
-    const { rows } = await pool.query(
-      `INSERT INTO tasks (workspace_id, agent, prompt) VALUES ($1, $2, $3)
-       RETURNING id, agent, prompt, status, created_at`,
-      [req.workspace.id, agent, prompt]
-    );
+    // Остаток проверяется здесь, а не в середине работы: если лимит кончится
+    // между автором и редактором, клиент получит непроверенный текст.
+    const allowed = limits.check(req.userRow);
+    if (!allowed.ok) {
+      return res.status(402).json({
+        error: allowed.error,
+        detail: allowed.detail,
+        reason: allowed.reason,
+        limits: allowed.summary,
+      });
+    }
+
+    const summary = await limits.spend(req.telegramUser.id);
+
+    let rows;
+    try {
+      ({ rows } = await pool.query(
+        `INSERT INTO tasks (workspace_id, agent, prompt) VALUES ($1, $2, $3)
+         RETURNING id, agent, prompt, status, created_at`,
+        [req.workspace.id, agent, prompt]
+      ));
+    } catch (err) {
+      // Списали, а задача не завелась — вернуть, иначе человек платит
+      // за нашу ошибку.
+      await limits.refund(req.telegramUser.id).catch(() => {});
+      throw err;
+    }
 
     notifyAdminNewTask(rows[0], req.workspace).catch(() => {});
-    res.status(201).json({ task: rows[0] });
+    res.status(201).json({ task: rows[0], limits: summary });
   } catch (err) {
     console.error('tasks create:', err.message);
     res.status(500).json({ error: 'Не удалось поставить задачу' });

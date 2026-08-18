@@ -8,6 +8,7 @@ const { runnerAuth } = require('./middleware/runnerAuth');
 const meRoutes = require('./routes/me');
 const briefRoutes = require('./routes/brief');
 const tasksRoutes = require('./routes/tasks');
+const billingRoutes = require('./routes/billing');
 const runnerRoutes = require('./routes/runner');
 const { getWebhookPath, handleWebhook } = require('./bot/bot');
 
@@ -29,6 +30,7 @@ app.use('/api', authMiddleware);
 app.use('/api/me', meRoutes);
 app.use('/api/brief', briefRoutes);
 app.use('/api/tasks', tasksRoutes);
+app.use('/api/billing', billingRoutes);
 
 // Отдельный вход для локального раннера — по общему секрету, без Telegram
 app.use('/runner', runnerAuth, runnerRoutes);

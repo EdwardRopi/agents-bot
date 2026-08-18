@@ -4,6 +4,7 @@ import Room from './Room.jsx';
 import AgentChat from './AgentChat.jsx';
 import BriefWizard from './BriefWizard.jsx';
 import Tour from './Tour.jsx';
+import Tariffs from './Tariffs.jsx';
 
 /** Версия в ключе — чтобы при переделке тура его увидели и старые клиенты. */
 const TOUR_KEY = 'tour_v1';
@@ -118,7 +119,12 @@ export default function App() {
           onOpenAgent={(id) => setScreen({ name: 'chat', agentId: id })}
           onOpenWizard={openWizard}
           onReplayTour={() => setTour(true)}
+          onOpenTariffs={() => setScreen({ name: 'tariffs' })}
         />
+      )}
+
+      {screen.name === 'tariffs' && (
+        <Tariffs onChanged={async () => setMe(await api.me())} />
       )}
 
       {tour && screen.name === 'room' && <Tour agents={me.agents} onClose={closeTour} />}
@@ -128,8 +134,12 @@ export default function App() {
           agent={me.agents.find((a) => a.id === screen.agentId)}
           tasks={tasks}
           briefReady={me.brief.progress.ready}
-          onSent={loadTasks}
+          onSent={async () => {
+            await loadTasks();
+            setMe(await api.me()); // счётчик остатка должен обновиться сразу
+          }}
           onOpenWizard={openWizard}
+          onOpenTariffs={() => setScreen({ name: 'tariffs' })}
         />
       )}
 

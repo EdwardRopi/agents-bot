@@ -235,8 +235,30 @@ textarea:focus, input:focus { outline: 2px solid var(--ink); outline-offset: -1p
   border-radius: var(--radius); padding: 14px 15px;
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
 }
-.tour-card h3 { margin: 0 0 6px; font-size: 15.5px; font-weight: 700; }
-.tour-card p { margin: 0; font-size: 14px; color: var(--muted); }
+.tour-card h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.tour-card p { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
+.tour-lead { letter-spacing: -0.01em; }
+
+/* Полоска шагов — та же, что в мастере анкеты: человек уже видел её там. */
+.tour-dots { display: flex; gap: 3px; margin-bottom: 13px; }
+.tour-dots i { flex: 1; height: 3px; border-radius: 2px; background: var(--line); }
+.tour-dots i.on { background: var(--ink); }
+
+.tour-who { display: flex; gap: 12px; align-items: center; }
+.tour-who .plate { width: 54px; height: 54px; flex: none; }
+.tour-who > div { min-width: 0; }
+.tour-role { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+.tour-accent { display: block; height: 3px; width: 34px; border-radius: 2px; margin-top: 7px; }
+
+@keyframes tourIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: none; }
+}
+.tour-in { animation: tourIn 0.22s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .tour-in { animation: none; }
+  .tour-hole { transition: none; }
+}
 
 .tour-arrow {
   position: absolute; width: 0; height: 0;
@@ -245,14 +267,9 @@ textarea:focus, input:focus { outline: 2px solid var(--ink); outline-offset: -1p
 .tour-arrow.up { top: -9px; border-bottom: 9px solid var(--card); }
 .tour-arrow.down { bottom: -9px; border-top: 9px solid var(--card); }
 
-.tour-nav { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
-.tour-skip {
-  background: none; border: 0; padding: 6px 0;
-  font-size: 13px; color: var(--muted); text-decoration: underline;
-}
-.tour-step {
-  margin-left: auto; font-size: 12px; color: var(--muted);
-  font-variant-numeric: tabular-nums;
+.tour-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; margin-top: 16px;
 }
 
 .tour-again {
